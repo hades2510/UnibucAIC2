@@ -1,0 +1,9 @@
+requests>=2.32,<3
+openai>=1.50,<3
+beautifulsoup4>=4.12,<5
+numpy>=1.26,<3
+scikit-learn>=1.5,<2
+transformers>=4.45,<5
+sentence-transformers>=3.0,<6
+datasets>=3.0,<5
+torch>=2.3,<3
