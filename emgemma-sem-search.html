@@ -1,0 +1,96 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>EmbeddingGemma Browser Demo</title>
+</head>
+<body>
+  <h2>EmbeddingGemma Semantic Search</h2>
+
+  <button id="run">Run semantic search</button>
+  <p id="status">Ready</p>
+  <pre id="results"></pre>
+
+  <script type="module">
+
+
+import { pipeline, matmul } from
+  "https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.3.1";
+
+const status = document.getElementById("status");
+const results = document.getElementById("results");
+const button = document.getElementById("run");
+
+let extractor;
+
+button.addEventListener("click", async () => {
+  button.disabled = true;
+
+  try {
+    if (!extractor) {
+      status.textContent = "Loading model...";
+
+      extractor = await pipeline(
+        "feature-extraction",
+        "onnx-community/embeddinggemma-2-ONNX",
+        {
+          device: navigator.gpu ? "webgpu" : "wasm",
+          dtype: "q4"
+        }
+      );
+    }
+
+    status.textContent = "Computing embeddings...";
+
+    const query =
+      "task: search result | query: Which planet is known as the Red Planet?";
+
+    const documents = [
+      "title: none | text: Venus is Earth's twin.",
+      "title: none | text: Mars is known as the Red Planet.",
+      "title: none | text: Jupiter is the largest planet.",
+      "title: none | text: Saturn is famous for its rings."
+    ];
+
+    const embeddings = await extractor(
+      [query, ...documents],
+      {
+        pooling: "mean",
+        normalize: true
+      }
+    );
+
+    const queryEmbedding = embeddings.slice([0, 1]);
+    const documentEmbeddings = embeddings.slice([1, null]);
+
+    const scores = (
+      await matmul(
+        queryEmbedding,
+        documentEmbeddings.transpose(1, 0)
+      )
+    ).tolist()[0];
+
+    const ranking = scores
+      .map((score, i) => ({
+        score,
+        document: documents[i]
+      }))
+      .sort((a, b) => b.score - a.score);
+
+    results.textContent = JSON.stringify(ranking, null, 2);
+    status.textContent = "Done!";
+  } catch (error) {
+    status.textContent = "Error: " + error.message;
+    console.error(error);
+  } finally {
+    button.disabled = false;
+  }
+});
+  
+
+  </script>
+</body>
+</html>
+
