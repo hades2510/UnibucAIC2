@@ -1,0 +1,9 @@
+services:
+  pyspark_dev:
+    build: .
+    init: true
+    entrypoint: ["sleep"]
+    command: ["infinity"]
+    working_dir: /app
+    volumes:
+      - .:/app
